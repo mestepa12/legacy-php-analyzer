@@ -24,6 +24,7 @@ final readonly class MethodDoc
         public ?string $inheritedFrom,
         public bool $documented,
         public int $line,
+        public bool $isGenerator = false,
     ) {
     }
 }

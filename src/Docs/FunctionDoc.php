@@ -19,6 +19,7 @@ final readonly class FunctionDoc
         public bool $documented,
         public string $file,
         public int $line,
+        public bool $isGenerator = false,
     ) {
     }
 }

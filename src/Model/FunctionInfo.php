@@ -21,6 +21,7 @@ final readonly class FunctionInfo
         public ?string $docComment,
         public string $file,
         public int $startLine,
+        public bool $isGenerator = false,
     ) {
     }
 }

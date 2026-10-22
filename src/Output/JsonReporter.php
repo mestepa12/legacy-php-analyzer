@@ -138,6 +138,7 @@ final class JsonReporter
                     'inheritedFrom' => $m->inheritedFrom,
                     'documented' => $m->documented,
                     'line' => $m->line,
+                    'generator' => $m->isGenerator,
                 ],
                 $class->methods,
             ),
@@ -157,6 +158,7 @@ final class JsonReporter
             'documented' => $function->documented,
             'file' => $function->file,
             'line' => $function->line,
+            'generator' => $function->isGenerator,
         ];
     }
 

@@ -27,6 +27,7 @@ final readonly class MethodInfo
         public ?string $returnType,
         public ?string $docComment,
         public int $startLine,
+        public bool $isGenerator = false,
     ) {
     }
 }

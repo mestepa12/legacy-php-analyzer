@@ -165,6 +165,7 @@ final class DocGenerator
             inheritedFrom: $inheritedFrom,
             documented: $ownDoc !== null,
             line: $method->startLine,
+            isGenerator: $method->isGenerator,
         );
     }
 
@@ -194,6 +195,7 @@ final class DocGenerator
             documented: $doc !== null,
             file: $function->file,
             line: $function->startLine,
+            isGenerator: $function->isGenerator,
         );
     }
 

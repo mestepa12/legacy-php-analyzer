@@ -170,6 +170,7 @@ final class SymbolCollector extends NodeVisitorAbstract
             returnType: TypeStringifier::stringify($node->returnType),
             docComment: $node->getDocComment()?->getText(),
             startLine: $node->getStartLine(),
+            isGenerator: self::isGenerator($node->stmts),
         );
     }
 
@@ -183,7 +184,40 @@ final class SymbolCollector extends NodeVisitorAbstract
             docComment: $node->getDocComment()?->getText(),
             file: $this->file,
             startLine: $node->getStartLine(),
+            isGenerator: self::isGenerator($node->stmts),
         );
+    }
+
+    /**
+     * A function body containing `yield` / `yield from` is a generator. Yields
+     * inside nested closures, arrow functions or anonymous classes belong to
+     * those, so the search does not descend into them.
+     *
+     * @param array<Node>|null $stmts
+     */
+    private static function isGenerator(?array $stmts): bool
+    {
+        $stack = $stmts ?? [];
+        while ($stack !== []) {
+            $node = array_pop($stack);
+            if ($node instanceof Node\Expr\Yield_ || $node instanceof Node\Expr\YieldFrom) {
+                return true;
+            }
+            if ($node instanceof Node\Expr\Closure || $node instanceof Node\Expr\ArrowFunction
+                || $node instanceof Stmt\Function_ || $node instanceof Stmt\Class_) {
+                continue;
+            }
+            foreach ($node->getSubNodeNames() as $name) {
+                $sub = $node->$name;
+                foreach (is_array($sub) ? $sub : [$sub] as $child) {
+                    if ($child instanceof Node) {
+                        $stack[] = $child;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
