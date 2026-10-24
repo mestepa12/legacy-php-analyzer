@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 
 # ---- build: install locked production dependencies with the runtime PHP ----
-FROM php:8.3-cli-alpine@sha256:25bcb4f1ce4f13651c0f89a6a2db2b14ac5a75555d3553fa03c83dff6d6966a8 AS build
+FROM php:8.3-cli-alpine@sha256:8dbeb51c352cf1f70d5d50f3642c9fbed311e914475ea2382f5bc1525bef7bb3 AS build
 
-COPY --from=composer:2@sha256:b6dcd72ca98fa19d0e5b8476de179859704891fad06dd9e0b96833d4c430a5fc /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2@sha256:af98f42dfff7c68ba8d53c2164fd9fde1087b7d449514baa38c418b1f6bc4bac /usr/bin/composer /usr/bin/composer
 
 RUN apk add --no-cache unzip
 
@@ -18,7 +18,7 @@ COPY resources ./resources
 RUN composer dump-autoload --no-dev --classmap-authoritative --no-interaction
 
 # ---- runtime: PHP + app only, as non-root ----
-FROM php:8.3-cli-alpine@sha256:25bcb4f1ce4f13651c0f89a6a2db2b14ac5a75555d3553fa03c83dff6d6966a8
+FROM php:8.3-cli-alpine@sha256:8dbeb51c352cf1f70d5d50f3642c9fbed311e914475ea2382f5bc1525bef7bb3
 
 RUN apk upgrade --no-cache \
  && addgroup -S app && adduser -S -G app app

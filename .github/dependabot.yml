@@ -1,16 +1,24 @@
 version: 2
 updates:
+  # cooldown: only propose versions published at least 7 days ago, so a
+  # compromised release has time to be detected and yanked before we adopt it.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: composer
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
