@@ -1,5 +1,6 @@
 # Legacy PHP Analyzer
 
+[![CI](https://github.com/mestepa12/legacy-php-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/mestepa12/legacy-php-analyzer/actions/workflows/ci.yml)
 ![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?logo=php&logoColor=white)
 ![nikic/php-parser](https://img.shields.io/badge/nikic%2Fphp--parser-5.x-4F5B93)
 ![PHPUnit](https://img.shields.io/badge/PHPUnit-11-3C9CD7)
@@ -87,6 +88,15 @@ php bin/analyze src/ --fail-on-dead-code
 composer test
 ```
 
+### Docker
+
+```bash
+docker build -t legacy-php-analyzer .
+docker run --rm -v "$PWD/path/to/legacy-project:/project:ro" legacy-php-analyzer /project --pretty
+```
+
+The image contains only PHP 8.3, the production dependencies and the tool, and runs as a non-root user.
+
 ### Exit codes
 
 | Code | Meaning |
@@ -158,6 +168,31 @@ Each file's AST is walked once. After that, every phase reads only the previous 
 - a documentation drift project with every kind of discrepancy, plus the false-positive cases that must stay silent
 
 The CLI is tested end to end, covering exit codes, which stream each message goes to, and the JSON schema.
+
+## CI pipeline
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every `push` and every `pull_request`. Three jobs run in parallel; `docker` waits for the tests to pass.
+
+| Job | What it does | Why |
+|-----|--------------|-----|
+| `tests` | Runs PHPUnit on PHP 8.2 and 8.3 using the committed `composer.lock`. | 8.2 is the minimum declared in `composer.json` and 8.3 is what the Docker image ships, so both ends of the supported range are covered. The lock file makes CI install exactly what developers install. |
+| `secrets-scan` | Runs [gitleaks](https://github.com/gitleaks/gitleaks) over the **whole git history** (`fetch-depth: 0`). | A secret deleted in a later commit is still leaked in the history, so scanning only the latest tree is not enough. Findings are redacted (`--redact`) so the secret is not printed again in the logs. |
+| `dependency-scan` | Scans `composer.lock` with `trivy fs`, including dev dependencies. | Catches known CVEs in Composer packages without building anything. Dev dependencies are included because they run in CI and on developer machines. |
+| `docker` | Builds the image with Buildx (GitHub Actions cache), runs the analyzer inside it against a test fixture and checks the JSON, then scans the image with `trivy image`. | Building on every change keeps the `Dockerfile` from rotting. The smoke test proves the image actually works, not just that it builds. The image scan covers what the dependency scan can't see: Alpine packages and the PHP runtime itself. |
+
+### Failure criteria
+
+- Trivy fails the job on `HIGH` or `CRITICAL` vulnerabilities that **already have a fix** (`--ignore-unfixed`). Blocking on CVEs with no patch only produces noise nobody can act on. The threshold is set in `TRIVY_SEVERITY`.
+- gitleaks fails the job on any finding.
+- gitleaks and Trivy results are uploaded as SARIF to **Security → Code scanning**. That step has `continue-on-error` because code scanning is unavailable on pull requests from forks and on private repos without GitHub Advanced Security; the job still fails on the scan itself.
+
+### Securing the workflow itself
+
+- **Least privilege:** the workflow starts with `permissions: {}` (no permissions for `GITHUB_TOKEN`) and each job asks only for what it needs: `contents: read` to check out and, in the scan jobs, `security-events: write` to upload SARIF. A compromised step can't use the token to write to the repo.
+- **`persist-credentials: false`** on every checkout, so the token isn't left in `.git/config` for later steps.
+- **Credentials only through GitHub Secrets:** the pipeline needs none. Optionally, if the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets exist (*Settings → Secrets and variables → Actions*), they are used to log in to Docker Hub and avoid the anonymous pull limit. Otherwise the step is skipped.
+- **Everything pinned:** actions are pinned to a full commit SHA (the tag is kept as a comment), and the Trivy, gitleaks, PHP and Composer images are pinned by digest. A moved tag can't swap the code that runs. [Dependabot](.github/dependabot.yml) opens weekly PRs to bump actions, Docker images and Composer packages, so pinning doesn't mean going stale.
+- **`concurrency`** cancels older runs on the same branch, and every job has `timeout-minutes` so nothing hangs burning minutes.
 
 ## Known limitations (by design)
 
